@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة القيادة - قائمة الطلبات</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <!-- ملف إعدادات Firebase -->
+  <script src="firebase-config.js"></script>
+
+  <style>
+   body {
+  margin: 0;
+  font-family: "Tahoma", sans-serif;
+  background: linear-gradient(135deg, #efebe9, #d7ccc8);
+  color: #4e342e;
+}
+
+header {
+  background: linear-gradient(90deg, #6d4c41, #8d6e63);
+  color: #fff;
+  padding: 25px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+main {
+  padding: 30px;
+}
+
+ul#ordersList {
+  list-style: none;
+  padding: 0;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+ul#ordersList li {
+  background: #fff8e1;
+  border: 1px solid #ffcc80;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+ul#ordersList li strong {
+  color: #6d4c41;
+  font-size: 18px;
+}
+
+/* ✅ أزرار متوافقة مع اللمس */
+button {
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: bold;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  margin-left: 10px;
+  background: linear-gradient(90deg, #5d4037, #8d6e63);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(93,64,55,0.4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent; /* إزالة الخلفية الزرقاء */
+}
+
+/* عند اللمس (active) */
+button:active, .call-btn:active, .whatsapp-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 0 25px rgba(255,255,255,0.6);
+}
+
+/* Ripple Effect */
+button::after, .call-btn::after, .whatsapp-btn::after {
+  content: "";
+  position: absolute;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+button:active::after, .call-btn:active::after, .whatsapp-btn:active::after {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  animation: ripple 0.6s ease-out;
+}
+
+/* حركة الرِبل */
+@keyframes ripple {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.8;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* زر الحذف */
+.remove-btn {
+  background: linear-gradient(90deg, #c62828, #e53935);
+}
+.remove-btn:hover {
+  background: linear-gradient(90deg, #b71c1c, #d32f2f);
+}
+
+/* النوافذ */
+#confirmModal, #deleteModal, #successModal, #newOrderModal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background: #fff8e1;
+  padding: 30px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  max-width: 400px;
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #6d4c41;
+}
+
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+#successModal .modal-content {
+  background: #e8f5e9;
+}
+
+#successModal h2 {
+  color: #2e7d32;
+}
+
+#successModal p {
+  color: #1b5e20;
+  font-size: 16px;
+}
+
+/* نافذة الطلب الجديد */
+#newOrderModal .modal-content {
+  background: linear-gradient(135deg, rgba(93, 64, 55, 0.75), rgba(141, 110, 99, 0.65));
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 25px;
+  backdrop-filter: blur(8px);
+  animation: fadeSlideDown 0.6s ease-out;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  max-width: 500px;
+}
+
+/* العنوان */
+#newOrderModal h2 {
+  color: #e0ffe5;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* النص */
+#newOrderModal p {
+  color: #c8ffd2;
+  font-size: 16px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* حركة الظهور */
+@keyframes fadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -30px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>قائمة الطلبات</h1>
+    <button onclick="clearAllOrders()">🧹 تنظيف قائمة الطلبات</button>
+  </header>
+
+  <main>
+    <ul id="ordersList"></ul>
+  </main>
+
+  <!-- نافذة تأكيد تنظيف الكل -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <h2>⚠️ تأكيد العملية</h2>
+      <p>هل أنت متأكد أنك تريد حذف جميع الطلبات؟</p>
+      <div class="modal-actions">
+        <button class="remove-btn" onclick="confirmClear()">نعم، احذف الكل</button>
+        <button onclick="closeConfirm()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة تأكيد إزالة فردية -->
+  <div id="deleteModal" class="modal">
+    <div class="modal-content">
+      <h2>⚠️ تأكيد الإزالة</h2>
+      <p>هل أنت متأكد أنك تريد حذف هذا الطلب؟</p>
+      <div class="modal-actions">
+        <button class="remove-btn" onclick="confirmDelete()">نعم، احذف</button>
+        <button onclick="closeDelete()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة إشعار نجاح -->
+  <div id="successModal" class="modal">
+    <div class="modal-content">
+      <h2>✅ نجاح العملية</h2>
+      <p id="successMessage"></p>
+      <div class="modal-actions">
+        <button onclick="closeSuccess()">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة إشعار طلب جديد -->
+  <div id="newOrderModal" class="modal">
+    <div class="modal-content">
+      <h2>🆕 طلب جديد</h2>
+      <p id="newOrderMessage"></p>
+      <div class="modal-actions">
+        <button onclick="closeNewOrder()">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let deleteTargetId = null;
+    let initialLoad = true;
+
+    // ✅ تحميل الطلبات مع الاستماع المباشر
+    function loadOrders() {
+      const ordersList = document.getElementById("ordersList");
+      ordersList.innerHTML = "";
+
+      db.collection("orders").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+        ordersList.innerHTML = "";
+
+        snapshot.docChanges().forEach(change => {
+          if (change.type === "added") {
+            const order = change.doc.data();
+            if (!initialLoad && !order.opened) {
+              showNewOrder(order);
+            }
+          }
+        });
+
+        snapshot.forEach(doc => {
+          const order = doc.data();
+          const li = document.createElement("li");
+          const statusIcon = order.opened ? "✔️" : "🟢";
+
+          li.innerHTML = `
+            <span>${statusIcon} <strong>${order.name}</strong> - ${order.city}</span>
+            <span>
+              <button onclick="viewOrder('${doc.id}')">👁️ عرض</button>
+              <button class="remove-btn" onclick="deleteOrder('${doc.id}')">🗑️ إزالة</button>
+            </span>
+          `;
+          ordersList.appendChild(li);
+        });
+
+        initialLoad = false;
+      }, error => {
+        console.error("❌ خطأ في تحميل الطلبات:", error);
+      });
+    }
+
+    // ✅ عرض تفاصيل الطلب
+    function viewOrder(id) {
+      window.location.href = `order-details.html?id=${id}`;
+    }
+
+    // ✅ إزالة فردية
+    function deleteOrder(id) {
+      deleteTargetId = id;
+      document.getElementById("deleteModal").style.display = "flex";
+    }
+
+    function closeDelete() {
+      document.getElementById("deleteModal").style.display = "none";
+      deleteTargetId = null;
+    }
+
+    async function confirmDelete() {
+      if (!deleteTargetId) return;
+      try {
+        await db.collection("orders").doc(deleteTargetId).delete();
+        showSuccess("تم حذف الطلب بنجاح ✅");
+        closeDelete();
+      } catch (error) {
+        console.error("❌ خطأ في حذف الطلب:", error);
+        showSuccess("حدث خطأ أثناء حذف الطلب ❌");
+        closeDelete();
+      }
+    }
+
+    // ✅ تنظيف الكل
+    function clearAllOrders() {
+      document.getElementById("confirmModal").style.display = "flex";
+    }
+
+    function closeConfirm() {
+      document.getElementById("confirmModal").style.display = "none";
+    }
+
+    async function confirmClear() {
+      try {
+        const snapshot = await db.collection("orders").get();
+        const batch = db.batch();
+        snapshot.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        showSuccess("تم تنظيف جميع الطلبات بنجاح ✅");
+        closeConfirm();
+      } catch (error) {
+        console.error("❌ خطأ في تنظيف الطلبات:", error);
+        showSuccess("حدث خطأ أثناء تنظيف الطلبات ❌");
+        closeConfirm();
+      }
+    }
+
+    // ✅ إشعار نجاح
+    function showSuccess(message) {
+      document.getElementById("successMessage").textContent = message;
+      document.getElementById("successModal").style.display = "flex";
+      setTimeout(() => {
+        closeSuccess();
+      }, 3000);
+    }
+
+    function closeSuccess() {
+      document.getElementById("successModal").style.display = "none";
+    }
+
+    // ✅ إشعار طلب جديد
+    function showNewOrder(order) {
+      document.getElementById("newOrderMessage").textContent =
+        `تم استلام طلب جديد من ${order.name} - ${order.city}`;
+      document.getElementById("newOrderModal").style.display = "flex";
+      setTimeout(() => {
+        closeNewOrder();
+      }, 4000);
+    }
+
+    function closeNewOrder() {
+      document.getElementById("newOrderModal").style.display = "none";
+    }
+
+    // ✅ تحميل الطلبات عند فتح الصفحة
+    loadOrders();
+  </script>
+</body>
+</html>

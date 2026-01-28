@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة القيادة - إدارة المتجر</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <!-- ملف إعدادات Firebase -->
+  <script src="firebase-config.js"></script>
+
+  <style>
+    body {
+  margin: 0;
+  font-family: "Tahoma", sans-serif;
+  background: linear-gradient(135deg, #fff3e0, #ffcd82);
+  color: #3b251f;
+}
+
+header {
+  background: linear-gradient(90deg, #a14805, #583302);
+  color: #fff;
+  text-align: center;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+header p {
+  margin: 5px 0 0;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+main {
+  padding: 30px;
+}
+
+.form-section, .products-section {
+  background: #ffffff48;
+  border-radius: 20px;
+  border: 2px solid #e65100;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+h2 {
+  margin-top: 0;
+  color: #e65100;
+  font-size: 22px;
+  position: relative;
+}
+
+h2::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: #ff6f00;
+  margin-top: 8px;
+  border-radius: 2px;
+}
+
+label {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: bold;
+  color: #6d4c41;
+}
+
+/* ✅ إدخال وأزرار مع مؤثر فاخر للضغط */
+input, textarea, button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  background-color: #a36a3c3f;
+  border-radius: 26px;
+  border: 1px solid #f5a24f;
+  font-size: 1rem;
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent; /* إزالة الخلفية الزرقاء الافتراضية */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:hover, textarea:hover, button:hover {
+  scale: 101%;
+  box-shadow: 0 2px 15px #ff6f0090;
+  cursor: pointer;
+}
+
+/* عند الضغط (active) */
+button:active {
+  transform: scale(0.95);
+  box-shadow: 0 0 25px rgba(255,255,255,0.6);
+}
+
+/* Ripple Effect */
+button::after {
+  content: "";
+  position: absolute;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+button:active::after {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  animation: ripple 0.6s ease-out;
+}
+
+/* حركة الرِبل */
+@keyframes ripple {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.8;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+
+.add-product {
+  margin-top: 15px;
+  background: linear-gradient(90deg, #a54801, #ff8f00);
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-radius: 50px;
+  font-size: 15px;
+}
+
+.add-product:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(255,111,0,0.5);
+  background: linear-gradient(90deg, #d45c00, #f89a1e);
+}
+
+#productsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.product-card {
+  background: #fff8e15b;
+  border: 2px solid #ff9900;
+  border-radius: 20px;
+  padding: 15px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.product-card img {
+  width: 180px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 15px;
+  margin-bottom: 10px;
+}
+
+.product-card h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #e65100;
+}
+
+.product-card p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #5d4037;
+}
+
+.product-card strong {
+  color: #ff6f00;
+  font-size: 16px;
+}
+
+/* Toast */
+.toast {
+  visibility: hidden;
+  min-width: 250px;
+  background: linear-gradient(90deg, #4caf50, #2e7d32);
+  color: #fff;
+  text-align: center;
+  border-radius: 30px;
+  padding: 16px;
+  position: fixed;
+  z-index: 1000;
+  left: 50%;              /* ضع العنصر في منتصف العرض */
+  top: 20px;              /* اجعله في الأعلى */
+  transform: translateX(-50%) translateY(-20px); /* ضبط التوسيط */
+  font-size: 15px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity 0.5s, transform 0.5s;
+}
+
+.toast.show {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0); /* إرجاعه لمكانه الطبيعي */
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1001;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: #fff8e1;
+  padding: 25px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  max-width: 400px;
+}
+
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.remove-btn {
+  background: linear-gradient(90deg, #c62828, #e53935);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 30px;
+  cursor: pointer;
+}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>لوحة القيادة</h1>
+    <p>إدارة المنتجات والمحتوى</p>
+  </header>
+
+  <main>
+    <!-- نموذج إضافة منتج -->
+    <section class="form-section">
+      <h2>إضافة منتج جديد</h2>
+      <form id="productForm">
+        <label>اسم المنتج</label>
+        <input type="text" id="name" required>
+
+        <label>الوصف</label>
+        <textarea id="description" required></textarea>
+
+        <label>السعر</label>
+        <input type="number" id="price" required>
+
+        <label>اسم ملف الصورة (داخل مجلد products-img)</label>
+        <input type="text" id="imageFileName" placeholder="bread.jpg" required>
+
+        <button class="add-product" type="submit">إضافة المنتج</button>
+      </form>
+    </section>
+
+    <!-- قائمة المنتجات -->
+    <section class="products-section">
+      <h2>المنتجات الحالية</h2>
+      <div id="productsList"></div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Modal -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <h2>⚠️ تأكيد العملية</h2>
+      <p id="confirmMessage">هل أنت متأكد من تنفيذ هذه العملية؟</p>
+      <div class="modal-actions">
+        <button class="remove-btn" id="confirmYes">نعم</button>
+        <button id="confirmNo">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- سكريبت المشروع المعدل -->
+  <script src="assets/js/dashboard.js"></script>
+</body>
+</html>
