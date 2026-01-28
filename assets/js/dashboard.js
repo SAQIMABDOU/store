@@ -80,7 +80,7 @@ async function loadProducts() {
         <img src="${product.imageUrl}" alt="${product.name}" width="150">
         <h3>${product.name}</h3>
         <p>${product.description}</p>
-        <strong>$${product.price}</strong>
+        <strong>dh${product.price}</strong>
         <button onclick="editProduct('${doc.id}', '${product.name}', '${product.description}', '${product.price}', '${product.imageUrl}')">✏️ تعديل</button>
         <button onclick="deleteProduct('${doc.id}')">🗑️ حذف</button>
       `;

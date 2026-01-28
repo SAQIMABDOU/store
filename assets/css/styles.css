@@ -369,45 +369,73 @@ body {
 .site-footer {
   background: #ff77001c;
   border-top: 1px solid #f9ad6e;
-  margin-bottom: 8px;
+  margin-top: 40px;       /* مسافة عن المحتوى */
   padding: 28px 0;
   border-radius: 25px;
+  text-align: center;     /* محتوى الفوتر في الوسط */
+  animation: fadeUp 1s ease; /* دخول أنيق */
 }
+
 .site-footer:hover {
   border: 2px solid #51ff00;
   background: #1eff000c;
+  box-shadow: 0 -4px 20px rgba(81, 255, 0, 0.3);
+  transform: translateY(-4px);
+  transition: all 0.4s ease;
 }
+
 .footer__grid {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
   gap: var(--gap);
   align-items: start;
+  justify-content: center;
 }
+
 .footer__title {
   margin: 0 0 8px;
   color: var(--accent-2);
+  font-weight: bold;
+  letter-spacing: 1px;
 }
+
 .footer__text {
   color: #5a4a40;
 }
+
 .footer__nav {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
+  justify-content: center;
 }
+
 .footer__nav a {
   color: var(--muted);
   text-decoration: none;
-  padding: 6px 8px;
+  padding: 6px 12px;
   border-radius: 8px;
   transition: background 0.3s ease, transform 0.3s ease;
   position: relative;
   overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
 }
+
 .footer__nav a:hover {
   background: #e6dccf;
-  transform: scale(1.05);
+  transform: scale(1.1) rotate(-2deg);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* أنيميشن دخول الفوتر */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 /* مؤثر الضغط على روابط التذييل */
 .footer__nav a:active {
