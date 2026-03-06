@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  
+  <title>المتجر - قهوة حرفية وأطعمة فاخرة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+  <!-- ملف إعدادات Firebase -->
+  <script src="firebase-config.js"></script>
+
+  <style>
+   /* ✅ ستايل Toast */
+.toast {
+  visibility: hidden;
+  min-width: 280px;
+  max-width: 400px;
+  background: linear-gradient(90deg, #4caf50, #2e7d32); /* افتراضي: نجاح */
+  color: #fff;
+  text-align: center;
+  border-radius: 12px;
+  padding: 14px 20px;
+  position: fixed;
+  z-index: 1000;
+  left: 50%;              /* توسيط أفقي */
+  top: 20px;              /* وضعه في الأعلى */
+  transform: translateX(-50%) translateY(-30px); /* ضبط التوسيط مع حركة دخول */
+  font-size: 15px;
+  font-weight: bold;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.toast.show {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0); /* إرجاعه لمكانه الطبيعي */
+}
+
+.toast.success { background: linear-gradient(90deg, #4caf4fb6, #2e7d3289); }
+.toast.error   { background: linear-gradient(90deg, #f4433690, #b71c1c86); }
+.toast.info    { background: linear-gradient(90deg, #2195f385, #1565c0); }
+  </style>
+</head>
+<body>
+  <!-- رأس -->
+ <header class="site-header">
+  <div class="container header__wrap">
+    <span class="brand__title">قهوة حرفية & أطعمة فاخرة</span>
+
+    <!-- شريط البحث -->
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder=" ابحث عن منتج..." />
+      <button  id="searchBtn">بحث</button>
+    </div>
+
+    <!-- أيقونة السلة -->
+    <button class="cartBtn" id="cartBtn">🛒 سلة الطلبات (<span id="cartCount">0</span>)</button>
+  </div>
+</header>
+
+  <!-- واجهة ترحيبية -->
+  <section class="hero">
+    <div class="container hero__grid">
+      <div class="hero__content">
+        <h1 class="hero__title">مرحبًا بكم في متجرنا</h1>
+        <p class="hero__subtitle">نكهات فاخرة وقهوة حرفية</p>
+        <p class="hero__text">
+          استمتع بتجربة فريدة تجمع بين القهوة المحمّصة بعناية وأشهى الأطعمة الفاخرة.
+        </p>
+      </div>
+      <figure class="media">
+        <img src="assets/products-img/cafe.png" alt="صورة رئيسية">
+      </figure>
+    </div>
+  </section>
+
+  <!-- المنتجات -->
+  <section id="products" class="offerings">
+    <div class="container">
+      <header class="section-header">
+        <h2 class="section-title">منتجاتنا</h2>
+        <p class="section-subtitle">مختارات من أفضل منتجاتنا</p>
+      </header>
+      <div id="productsList" class="cards"></div>
+    </div>
+  </section>
+
+  <!-- نافذة السلة -->
+  <div id="cartModal" style="display:none;">
+    <h3>سلة الطلبات</h3>
+    <ul id="cartItems"></ul>
+    <button id="confirmOrderBtn">✅ تأكيد الطلب</button>
+    <button onclick="document.getElementById('cartModal').style.display='none'">إغلاق</button>
+  </div>
+
+  <!-- نافذة تأكيد الطلب -->
+  <div id="orderFormModal" style="display:none;">
+    <h3>تأكيد الطلب</h3>
+    <form id="orderForm">
+      <label>الاسم:</label>
+      <input type="text" id="customerName" required><br>
+      <label>المدينة:</label>
+      <input type="text" id="customerCity" required><br>
+      <label>العنوان:</label>
+      <input type="text" id="customerAddress" required><br>
+      <label>رقم الهاتف:</label>
+      <input type="text" id="customerPhone" required><br>
+      <button type="submit">📦 إرسال الطلب</button>
+    </form>
+    <button onclick="document.getElementById('orderFormModal').style.display='none'">إغلاق</button>
+  </div>
+
+  <!-- عنصر الرسائل (Toast) -->
+  <div id="toast" class="toast"></div>
+
+  <!-- تذييل -->
+  <footer class="site-footer" id="contact">
+    <div class="container footer__grid">
+      <div>
+        <h4 class="footer__title">عنّا</h4>
+        <p class="footer__text">
+          قهوة حرفية وأطعمة فاخرة—نكهات تُحاكي دفء المقهى وتفاصيل الحِرفة.
+        </p>
+      </div>
+    </div>
+    <div class="container footer__bottom">
+      <small>© 2026 جميع الحقوق محفوظة.</small>
+    </div>
+  </footer>
+  <!-- عنصر الرسائل (Toast) -->
+<div id="toast" class="toast"></div>
+
+<script>
+  let cart = [];
+  let allProducts = [];
+
+  // ✅ Toast function (إشعارات أنيقة)
+  function showToast(message, type="success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = "toast show " + type;
+    setTimeout(() => { toast.className = toast.className.replace("show " + type, ""); }, 3000);
+  }
+
+  // تحميل المنتجات من Firestore
+  async function loadProducts() {
+    const productsList = document.getElementById("productsList");
+    productsList.innerHTML = "";
+
+    try {
+      const snapshot = await db.collection("products").orderBy("createdAt", "desc").get();
+      allProducts = [];
+      snapshot.forEach(doc => {
+        const product = doc.data();
+        const id = doc.id;
+        allProducts.push({ ...product, id });
+      });
+      renderProducts(allProducts);
+    } catch (error) {
+      console.error("❌ خطأ في تحميل المنتجات:", error);
+      showToast("❌ خطأ في تحميل المنتجات", "error");
+    }
+  }
+
+  // عرض المنتجات في الصفحة
+  function renderProducts(products) {
+    const productsList = document.getElementById("productsList");
+    productsList.innerHTML = "";
+    products.forEach(product => {
+      const card = document.createElement("article");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${product.imageUrl}" alt="${product.name}" class="card__media" width="400" height="400">
+        <div class="card__body">
+          <h3 class="card__title">${product.name}</h3>
+          <p class="card__desc">${product.description}</p>
+          <div class="card__price">${product.price}DH</div>
+          <button id="btn-${product.id}" class="btn-order"
+            onclick="toggleCart('${product.id}')">
+            اضافة الى السلة 🛒
+          </button>
+        </div>
+      `;
+      productsList.appendChild(card);
+    });
+  }
+
+  // إضافة/إزالة منتج من السلة
+  function toggleCart(id) {
+    const product = allProducts.find(p => p.id === id);
+    const btn = document.getElementById("btn-" + id);
+    const index = cart.findIndex(item => item.id === id);
+
+    if (index === -1) {
+      cart.push(product);
+      btn.textContent = "❌ إلغاء الطلب";
+      btn.className = "btn-cancel";
+      showToast("✅ تمت إضافة المنتج إلى السلة", "success");
+    } else {
+      cart.splice(index, 1);
+      btn.textContent = "🛒 اضافة الى السلة";
+      btn.className = "btn-order";
+      showToast("❌ تمت إزالة المنتج من السلة", "error");
+    }
+
+    document.getElementById("cartCount").textContent = cart.length;
+  }
+
+ // عرض السلة مع المجموع الكلي باللون الأخضر
+document.getElementById("cartBtn").addEventListener("click", () => {
+  const cartItems = document.getElementById("cartItems");
+  cartItems.innerHTML = "";
+  let totalPrice = 0;
+
+  cart.forEach(item => {
+    totalPrice += parseFloat(item.price) || 0;
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <img src="${item.imageUrl}" alt="${item.name}" width="50" style="vertical-align:middle;margin-right:8px;">
+      ${item.name} - ${item.price}DH
+    `;
+    cartItems.appendChild(li);
+  });
+
+// ✅ إضافة المجموع الكلي أسفل القائمة بدون رقم ترتيب
+if (cart.length > 0) {
+  const totalDiv = document.createElement("div");
+  totalDiv.style.fontWeight = "bold";
+  totalDiv.style.marginTop = "12px";
+  totalDiv.style.color = "#2e7d32"; // أخضر أنيق
+  totalDiv.textContent = `المجموع الكلي: ${totalPrice} DH`;
+  cartItems.appendChild(totalDiv);
+}
+
+  document.getElementById("cartModal").style.display = "block";
+});
+
+  // تأكيد الطلب
+  document.getElementById("confirmOrderBtn").addEventListener("click", () => {
+    document.getElementById("cartModal").style.display = "none";
+    document.getElementById("orderFormModal").style.display = "block";
+  });
+
+  // إرسال الطلب إلى Firestore
+  document.getElementById("orderForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = document.getElementById("customerName").value;
+    const city = document.getElementById("customerCity").value;
+    const address = document.getElementById("customerAddress").value;
+    const phone = document.getElementById("customerPhone").value;
+
+    try {
+      await db.collection("orders").add({
+        name,
+        city,
+        address,
+        phone,
+        items: cart,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        opened: false
+      });
+
+      showToast(`✅ تم إرسال الطلب! عدد المنتجات: ${cart.length}`, "success");
+      cart = [];
+      document.getElementById("cartCount").textContent = 0;
+
+      // إغلاق النافذة
+      document.getElementById("orderFormModal").style.display = "none";
+
+      // إعادة تحميل الصفحة
+      location.reload();
+
+    } catch (error) {
+      console.error("❌ خطأ في حفظ الطلب:", error);
+      showToast("❌ حدث خطأ أثناء حفظ الطلب", "error");
+    }
+  });
+
+  // ✅ دالة البحث
+  function performSearch() {
+    const query = document.getElementById("searchInput").value.toLowerCase();
+    const filtered = allProducts.filter(p =>
+      p.name.toLowerCase().includes(query) ||
+      p.description.toLowerCase().includes(query)
+    );
+    renderProducts(filtered);
+    if (filtered.length === 0 && query !== "") {
+      showToast("ℹ️ لا توجد منتجات مطابقة للبحث", "info");
+    }
+  }
+
+  // ✅ شريط البحث - تلقائي عند الكتابة
+  document.getElementById("searchInput").addEventListener("input", performSearch);
+
+  // زر البحث
+  document.getElementById("searchBtn").addEventListener("click", performSearch);
+
+  // تشغيل تحميل المنتجات عند فتح الصفحة
+  loadProducts();
+
+  // دالة التمرير إلى قسم عنّا
+  function scrollToAbout() {
+    document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+  }
+  document.addEventListener('keydown', function(e){
+    // منع Ctrl+C و Ctrl+S و Ctrl+U
+    if(e.ctrlKey && (e.key === 'c' || e.key === 's' || e.key === 'u')){
+        e.preventDefault();
+    }
+});
+document.addEventListener('contextmenu', function(e){
+    e.preventDefault(); // يمنع قائمة النقر بالزر الأيمن
+});
+</script>
+</body>
+</html>
